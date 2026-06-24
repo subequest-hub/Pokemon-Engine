@@ -250,10 +250,8 @@ canvas{
   object-fit: cover !important;
 }
 
-/* Show mobile controls in fullscreen using :has() selector */
-#gameWrapper:has(#gameContainer:fullscreen) #mobileControls,
-#gameWrapper:has(#gameContainer:-webkit-full-screen) #mobileControls,
-#gameWrapper:has(#gameContainer:-moz-full-screen) #mobileControls {
+/* Mobile controls in fullscreen - toggled via JS class */
+#mobileControls.fullscreen-active {
   display: flex !important;
   position: fixed !important;
   bottom: 10px !important;
@@ -473,6 +471,25 @@ let currentBGM='none';
 let bgmLoopTimeout=null;  // Track the loop timeout so we can clear it
 const BGM_TEMPO=120; // BPM
 
+function playTestBeep() {
+  if(!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.2);
+    console.log('[AUDIO] Test beep played');
+  } catch(e) {
+    console.error('[AUDIO] Beep error:', e);
+  }
+}
+
 function testAudio(){
   console.log('testAudio called');
   if(!audioCtx){
@@ -503,10 +520,7 @@ function initAudio(){
 }
 
 function playBackgroundMusic(bgmType='overworld'){
-  // Allow music in title, overworld, and dialogue
-  if(gameState !== STATE.TITLE && gameState !== STATE.OVERWORLD && gameState !== STATE.DIALOGUE){
-    return;
-  }
+  // Don't block by game state - let all states play music
   
   if(!audioCtx){
     initAudio();
@@ -514,19 +528,25 @@ function playBackgroundMusic(bgmType='overworld'){
   
   if(!audioCtx) return;
   
+  // Resume if suspended
   if(audioCtx.state==='suspended'){
     audioCtx.resume().catch(err=>console.log('[AUDIO] Resume error:', err));
   }
   
   if(currentBGM===bgmType && bgmPlaying) return;
   
+  // Stop previous music first
+  stopBackgroundMusic();
+  
   currentBGM=bgmType;
   bgmPlaying=true;
-  stopBackgroundMusic();
   bgmStartTime=audioCtx.currentTime;
   
   const patterns=BGM_PATTERNS[bgmType]||BGM_PATTERNS.overworld;
-  if(!patterns) return;
+  if(!patterns || !patterns.melody) {
+    console.log('[AUDIO] No pattern found for:', bgmType);
+    return;
+  }
   
   startBGMPattern(patterns);
 }
@@ -566,6 +586,8 @@ function noteFreq(note){
 
 function scheduleNote(freq, startTime, duration, volume=0.1, waveform='sine'){
   try {
+    if (!audioCtx || audioCtx.state === 'suspended') return; // Skip if not ready
+    
     const osc=audioCtx.createOscillator();
     const gain=audioCtx.createGain();
     osc.connect(gain);
@@ -1083,7 +1105,13 @@ const SFX = {
 };
 
 function startBGMPattern(patterns){
-  const beatMs=500;
+  const beatMs = 500; // 120 BPM
+  
+  // Safety check
+  if (!patterns.melody || !Array.isArray(patterns.melody)) {
+    console.log('[AUDIO] Invalid melody pattern');
+    return;
+  }
   
   const loopFunc=()=>{
     if(!bgmPlaying) return;
@@ -1093,26 +1121,38 @@ function startBGMPattern(patterns){
     
     // Play melody
     patterns.melody.forEach((note)=>{
-      const noteTime = loopStart+(t*beatMs/1000);
-      scheduleNote(noteFreq(note.note+12), noteTime, note.dur*beatMs/1000, 0.15, 'sine');
-      t+=note.dur;
+      if (note && note.note !== undefined) {
+        const noteTime = loopStart+(t*beatMs/1000);
+        scheduleNote(noteFreq(note.note+12), noteTime, note.dur*beatMs/1000, 0.15, 'sine');
+        t+=note.dur;
+      }
     });
     
-    t=0;
-    patterns.harmony.forEach(note=>{
-      const noteTime = loopStart+(t*beatMs/1000);
-      scheduleNote(noteFreq(note.note+12), noteTime, note.dur*beatMs/1000, 0.08, 'triangle');
-      t+=note.dur;
-    });
+    // Play harmony if exists
+    if (patterns.harmony && Array.isArray(patterns.harmony)) {
+      t=0;
+      patterns.harmony.forEach(note=>{
+        if (note && note.note !== undefined) {
+          const noteTime = loopStart+(t*beatMs/1000);
+          scheduleNote(noteFreq(note.note+12), noteTime, note.dur*beatMs/1000, 0.08, 'triangle');
+          t+=note.dur;
+        }
+      });
+    }
     
-    t=0;
-    patterns.bass.forEach(note=>{
-      const noteTime = loopStart+(t*beatMs/1000);
-      scheduleNote(noteFreq(note.note), noteTime, note.dur*beatMs/1000, 0.1, 'sawtooth');
-      t+=note.dur;
-    });
+    // Play bass if exists
+    if (patterns.bass && Array.isArray(patterns.bass)) {
+      t=0;
+      patterns.bass.forEach(note=>{
+        if (note && note.note !== undefined) {
+          const noteTime = loopStart+(t*beatMs/1000);
+          scheduleNote(noteFreq(note.note), noteTime, note.dur*beatMs/1000, 0.1, 'sawtooth');
+          t+=note.dur;
+        }
+      });
+    }
     
-    const totalBeats=patterns.melody.reduce((sum,n)=>sum+n.dur,0);
+    const totalBeats=patterns.melody.reduce((sum,n)=>sum+(n.dur||0),0);
     const nextLoopMs = totalBeats*beatMs;
     bgmLoopTimeout=setTimeout(loopFunc, nextLoopMs);
   };
@@ -1304,6 +1344,7 @@ function bt(ms){ return Math.max(80, Math.floor(ms/OPT.gameSpeed)); }
 
 function toggleFullscreen() {
   const container = document.getElementById('gameContainer');
+  const mobileControls = document.getElementById('mobileControls');
   console.log('🎮 toggleFullscreen called, container:', container);
   
   if (!document.fullscreenElement && 
@@ -1329,6 +1370,12 @@ function toggleFullscreen() {
       console.error('❌ No fullscreen API available');
     }
     
+    // Force show mobile controls immediately
+    if (mobileControls) {
+      mobileControls.classList.add('fullscreen-active');
+      console.log('✅ Mobile controls visible');
+    }
+    
   } else {
     
     console.log('📱 Exiting fullscreen...');
@@ -1346,12 +1393,19 @@ function toggleFullscreen() {
       console.log('✅ Using msExitFullscreen');
       document.msExitFullscreen();
     }
+    
+    // Force hide mobile controls immediately
+    if (mobileControls) {
+      mobileControls.classList.remove('fullscreen-active');
+      console.log('✅ Mobile controls hidden');
+    }
   }
 }
 
 // Update button text when fullscreen changes
 function updateFullscreenButton() {
   const btn = document.getElementById('fullscreenToggle');
+  const mobileControls = document.getElementById('mobileControls');
   const isFull = document.fullscreenElement || 
                  document.webkitFullscreenElement || 
                  document.mozFullScreenElement || 
@@ -1359,6 +1413,17 @@ function updateFullscreenButton() {
   
   if (btn) {
     btn.textContent = isFull ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
+  }
+  
+  // Toggle mobile controls visibility in fullscreen
+  if (mobileControls) {
+    if (isFull) {
+      mobileControls.classList.add('fullscreen-active');
+      console.log('✅ Fullscreen change: controls shown');
+    } else {
+      mobileControls.classList.remove('fullscreen-active');
+      console.log('✅ Fullscreen change: controls hidden');
+    }
   }
 }
 
@@ -12283,7 +12348,29 @@ function drawFullscreenDpad(){
   ctx.fillText('⛶', exitX, exitY);
 }
 
-// Using native Fullscreen API instead of custom fullscreenMode
+// Resume AudioContext on first user interaction (required for mobile)
+// Track if audio has been unlocked by user interaction
+let audioUnlocked = false;
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  
+  if (!audioCtx) {
+    initAudio();
+  }
+  
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().then(() => {
+      console.log('[AUDIO] Context resumed successfully');
+    }).catch(err => console.log('[AUDIO] Resume failed:', err));
+  }
+}
+
+// Add click/tap listeners to unlock audio on first interaction
+document.addEventListener('click', unlockAudio, { once: true });
+document.addEventListener('touchstart', unlockAudio, { once: true });
+document.addEventListener('keydown', unlockAudio, { once: true });
 
 if(sessionRestore()){
   // Successfully restored mid-game session
