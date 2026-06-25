@@ -1484,24 +1484,38 @@ function toggleFullscreen() {
 // Update button text when fullscreen changes
 function updateFullscreenButton() {
   const btn = document.getElementById('fullscreenToggle');
-  const isFull = !!(document.fullscreenElement || 
-                   document.webkitFullscreenElement || 
-                   document.mozFullScreenElement || 
-                   document.msFullscreenElement);
+  const fullscreenDpad = document.getElementById('mobileControlsFullscreen');
+  const gameContainer = document.getElementById('gameContainer');
   
-  console.log('🎯 Fullscreen state changed. isFull:', isFull);
+  const fsElement = document.fullscreenElement || 
+                    document.webkitFullscreenElement || 
+                    document.mozFullScreenElement || 
+                    document.msFullscreenElement;
+  
+  const isFull = !!fsElement;
+  
+  console.log('🎯 Fullscreen state changed. isFull:', isFull, 'fsElement:', fsElement);
   
   if (btn) {
     btn.textContent = isFull ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
   }
   
-  // Toggle the body class - CSS handles D-pad visibility
-  if (isFull) {
-    document.body.classList.add('fullscreen-active');
-    console.log('✅ Added fullscreen-active class');
+  if (fullscreenDpad) {
+    if (isFull) {
+      // MOVE D-pad INSIDE the fullscreen element so it renders on top
+      gameContainer.appendChild(fullscreenDpad);
+      // Update to position:absolute inside the fullscreen container
+      fullscreenDpad.style.cssText = 'display: flex !important; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 999999; background: rgba(0,0,0,0.5); padding: 15px 20px; border-radius: 12px; flex-direction: column; align-items: center; justify-content: center; gap: 12px; width: auto; pointer-events: auto;';
+      console.log('✅ D-pad MOVED INSIDE fullscreen element and SHOWN');
+    } else {
+      // MOVE D-pad back OUTSIDE when exiting fullscreen
+      document.body.appendChild(fullscreenDpad);
+      // Reset to position:fixed outside
+      fullscreenDpad.style.cssText = 'display: none !important; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 2147483647; background: rgba(0,0,0,0.5); padding: 15px 20px; border-radius: 12px; flex-direction: column; align-items: center; justify-content: center; gap: 12px; width: auto; pointer-events: auto;';
+      console.log('✅ D-pad MOVED back OUTSIDE fullscreen and HIDDEN');
+    }
   } else {
-    document.body.classList.remove('fullscreen-active');
-    console.log('✅ Removed fullscreen-active class');
+    console.error('❌ Fullscreen D-pad element NOT found!');
   }
 }
 
