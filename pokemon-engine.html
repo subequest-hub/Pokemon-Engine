@@ -263,6 +263,11 @@ canvas{
   pointer-events: none;
 }
 
+/* Show fullscreen D-pad when in fullscreen */
+body.fullscreen-active #mobileControlsFullscreen {
+  display: flex !important;
+}
+
 /* Enable pointer events for interactive containers */
 #fs-dpad-container,
 #fs-sys-container,
@@ -1495,7 +1500,6 @@ function toggleFullscreen() {
 function updateFullscreenButton() {
   const btn = document.getElementById('fullscreenToggle');
   const fullscreenDpad = document.getElementById('mobileControlsFullscreen');
-  const gameContainer = document.getElementById('gameContainer');
   
   const fsElement = document.fullscreenElement || 
                     document.webkitFullscreenElement || 
@@ -1504,25 +1508,28 @@ function updateFullscreenButton() {
   
   const isFull = !!fsElement;
   
-  console.log('🎯 Fullscreen state changed. isFull:', isFull, 'fsElement:', fsElement);
+  console.log('🎯 Fullscreen state changed. isFull:', isFull);
   
   if (btn) {
     btn.textContent = isFull ? '⛶ Exit Fullscreen' : '⛶ Fullscreen';
   }
   
+  // Toggle body class for CSS-based visibility
+  if (isFull) {
+    document.body.classList.add('fullscreen-active');
+  } else {
+    document.body.classList.remove('fullscreen-active');
+  }
+  
   if (fullscreenDpad) {
     if (isFull) {
-      // MOVE D-pad INSIDE the fullscreen element so it renders on top
-      gameContainer.appendChild(fullscreenDpad);
-      // Update to position:absolute inside the fullscreen container
-      fullscreenDpad.style.cssText = 'display: flex !important; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 999999; background: rgba(0,0,0,0.5); padding: 15px 20px; border-radius: 12px; flex-direction: column; align-items: center; justify-content: center; gap: 12px; width: auto; pointer-events: auto;';
-      console.log('✅ D-pad MOVED INSIDE fullscreen element and SHOWN');
+      // Show D-pad - keep it OUTSIDE gameContainer, just show it with fixed positioning
+      fullscreenDpad.style.display = 'flex';
+      console.log('✅ D-pad SHOWN in fullscreen (outside gameContainer)');
     } else {
-      // MOVE D-pad back OUTSIDE when exiting fullscreen
-      document.body.appendChild(fullscreenDpad);
-      // Reset to position:fixed outside
-      fullscreenDpad.style.cssText = 'display: none !important; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 2147483647; background: rgba(0,0,0,0.5); padding: 15px 20px; border-radius: 12px; flex-direction: column; align-items: center; justify-content: center; gap: 12px; width: auto; pointer-events: auto;';
-      console.log('✅ D-pad MOVED back OUTSIDE fullscreen and HIDDEN');
+      // Hide D-pad when exiting fullscreen
+      fullscreenDpad.style.display = 'none';
+      console.log('✅ D-pad HIDDEN');
     }
   } else {
     console.error('❌ Fullscreen D-pad element NOT found!');
