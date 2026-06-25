@@ -253,11 +253,11 @@ canvas{
 /* ── MOBILE CONTROLS - FULLSCREEN MODE ── */
 #mobileControlsFullscreen {
   display: none;
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   z-index: 999999;
   background: transparent;
   pointer-events: none;
@@ -315,7 +315,7 @@ body:not(.fullscreen-active) #mobileControls {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: #000 !important;
+  background: transparent !important;
 }
 
 #gameContainer:-webkit-full-screen {
@@ -328,7 +328,7 @@ body:not(.fullscreen-active) #mobileControls {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: #000 !important;
+  background: transparent !important;
 }
 
 #gameContainer:-moz-full-screen {
@@ -341,7 +341,7 @@ body:not(.fullscreen-active) #mobileControls {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: #000 !important;
+  background: transparent !important;
 }
 
 /* Canvas fills the fullscreen container while maintaining aspect ratio */
@@ -492,6 +492,35 @@ body:not(.fullscreen-active) #mobileControls {
   </div>
   <!-- /battleScreen -->
 
+  <!-- MOBILE CONTROLS - FULLSCREEN MODE (INSIDE gameContainer) -->
+  <div id="mobileControlsFullscreen">
+    <!-- D-PAD: Bottom Left -->
+    <div id="fs-dpad-container" style="position: absolute; bottom: 20px; left: 20px;">
+      <div class="dpad-wrap">
+        <div class="dpad-center"></div>
+        <div class="dpad-arm dpad-up"    id="dUp-fs">▲</div>
+        <div class="dpad-arm dpad-down"  id="dDown-fs">▼</div>
+        <div class="dpad-arm dpad-left"  id="dLeft-fs">◀</div>
+        <div class="dpad-arm dpad-right" id="dRight-fs">▶</div>
+      </div>
+    </div>
+
+    <!-- START/SELECT: Bottom Center -->
+    <div id="fs-sys-container" style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px;">
+      <button class="sys-btn" id="btnSelect-fs">SELECT</button>
+      <button class="sys-btn" id="btnStart-fs">START</button>
+    </div>
+
+    <!-- A/B BUTTONS: Bottom Right -->
+    <div id="fs-ab-container" style="position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
+      <button class="action-btn" id="btnA-fs">A</button>
+      <button class="action-btn" id="btnB-fs">B</button>
+    </div>
+
+    <!-- EXIT FULLSCREEN: Top Right -->
+    <button id="fs-exit-btn" style="position: absolute; top: 10px; right: 10px; padding: 8px 12px; background: rgba(255,0,0,0.7); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; z-index: 1000000;">⛶</button>
+  </div>
+
 </div><!-- /gameContainer -->
 
 </div><!-- /gameWrapper -->
@@ -515,35 +544,6 @@ body:not(.fullscreen-active) #mobileControls {
     <button class="sys-btn" id="btnSelect">SELECT</button>
     <button class="sys-btn" id="btnStart">START</button>
   </div>
-</div>
-
-<!-- MOBILE CONTROLS - FULLSCREEN MODE (SPLIT LAYOUT) -->
-<div id="mobileControlsFullscreen">
-  <!-- D-PAD: Bottom Left -->
-  <div id="fs-dpad-container" style="position: absolute; bottom: 20px; left: 20px;">
-    <div class="dpad-wrap">
-      <div class="dpad-center"></div>
-      <div class="dpad-arm dpad-up"    id="dUp-fs">▲</div>
-      <div class="dpad-arm dpad-down"  id="dDown-fs">▼</div>
-      <div class="dpad-arm dpad-left"  id="dLeft-fs">◀</div>
-      <div class="dpad-arm dpad-right" id="dRight-fs">▶</div>
-    </div>
-  </div>
-
-  <!-- START/SELECT: Bottom Center -->
-  <div id="fs-sys-container" style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px;">
-    <button class="sys-btn" id="btnSelect-fs">SELECT</button>
-    <button class="sys-btn" id="btnStart-fs">START</button>
-  </div>
-
-  <!-- A/B BUTTONS: Bottom Right -->
-  <div id="fs-ab-container" style="position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
-    <button class="action-btn" id="btnA-fs">A</button>
-    <button class="action-btn" id="btnB-fs">B</button>
-  </div>
-
-  <!-- EXIT FULLSCREEN: Top Right -->
-  <button id="fs-exit-btn" style="position: absolute; top: 10px; right: 10px; padding: 8px 12px; background: rgba(255,0,0,0.7); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; z-index: 1000000;">⛶</button>
 </div>
 
 <div id="statsBar">
